@@ -1,0 +1,44 @@
+version: '3'
+networks:
+  panel:
+volumes:
+  web-date:
+    driver: local
+  sql:
+    driver: local
+services:
+  php:
+    container_name: php
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+      - "8086:81"
+    volumes:
+      - web-date:/mnt/app/www
+      - ./appconf/appconfig:/mnt/app/www/config
+      - ./appconf/clients:/mnt/app/www/public/clients
+      - ./appconf/cron:/var/spool/cron/crontabs
+      - /etc/localtime:/etc/localtime
+    networks:
+      - panel
+    tty: true
+  db:
+    container_name: db
+    image: mariadb:10.6
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
+      - MYSQL_USER=panel
+      - MYSQL_DATABASE=panel
+    secrets:
+      - mysql_password
+    networks:
+      - panel
+    volumes:
+      - ./source/db:/docker-entrypoint-initdb.d
+      - sql:/var/lib/mysql
+secrets:
+  mysql_password:
+    file: .DBsecrets
